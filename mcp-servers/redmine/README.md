@@ -45,7 +45,7 @@ npm run build
 npm start
 ```
 
-## Cursor MCP Config
+## Register in NIM Chat UI
 
 Add this to your MCP client configuration:
 
