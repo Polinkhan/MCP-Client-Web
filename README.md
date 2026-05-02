@@ -21,15 +21,16 @@ A ChatGPT-style web client for **[NVIDIA NIM](https://docs.nvidia.com/nim/)** (O
 
 ## Quick start
 
+From the repository root (after `git clone`):
+
 ```bash
-cd MCP-Client-Web
-yarn install
+npm install
 ```
 
 Create `.env.local` in the project root (see [Environment variables](#environment-variables)), then:
 
 ```bash
-yarn dev
+npm run dev
 ```
 
 Open **http://localhost:3000**.
@@ -37,9 +38,13 @@ Open **http://localhost:3000**.
 Production:
 
 ```bash
-yarn build
-yarn start
+npm run build
+npm start
 ```
+
+If you use Yarn, `yarn install`, `yarn dev`, `yarn build`, and `yarn start` work the same way.
+
+To use the **bundled MCP servers** in `mcp-servers/`, install and build each one you need before configuring `/mcp` (see [Bundled MCP servers](#bundled-mcp-servers-mcp-servers)).
 
 ## Environment variables
 
@@ -79,9 +84,50 @@ Secrets for MCP servers (for example `REDMINE_API_KEY`) can be set in `.env.loca
 
 Stdio MCP only (same as Cursor’s local servers): each entry needs a **`command`**; optional **`args`**, **`env`**, **`cwd`**.
 
-## Optional: `mcp-servers/` in this repo
+## Bundled MCP servers (`mcp-servers/`)
 
-This repository may include example or internal MCP server packages under `mcp-servers/` (for example an HRM integration). Build and point your MCP JSON `command` / `args` at the built entry file. Those packages are independent Node projects with their own `package.json`.
+This repo ships **three optional stdio MCP connectors** as separate Node/TypeScript packages. The web app does **not** build them automatically: you must **install dependencies and compile** each server you want, then register the **built JavaScript** path in the MCP JSON (see [MCP configuration](#mcp-configuration)).
+
+| Connector | Directory | Stdio entry after `npm run build` | Docs |
+| --------- | --------- | ----------------------------------- | ---- |
+| Horila HRM | `mcp-servers/hrm` | `dist/mcp/server.js` | [mcp-servers/hrm/README.md](./mcp-servers/hrm/README.md) |
+| vNOC | `mcp-servers/vnoc` | `dist/mcp/server.js` | [mcp-servers/vnoc/README.md](./mcp-servers/vnoc/README.md) |
+| Redmine | `mcp-servers/redmine` | `dist/server.js` | [mcp-servers/redmine/README.md](./mcp-servers/redmine/README.md) |
+
+**Build every connector you use** (from the repo root or from each folder):
+
+```bash
+cd mcp-servers/hrm && npm install && npm run build && cd ../..
+# repeat for vnoc and/or redmine as needed
+cd mcp-servers/vnoc && npm install && npm run build && cd ../..
+cd mcp-servers/redmine && npm install && npm run build && cd ../..
+```
+
+Or one-liners from the repository root:
+
+```bash
+(cd mcp-servers/hrm && npm install && npm run build)
+(cd mcp-servers/vnoc && npm install && npm run build)
+(cd mcp-servers/redmine && npm install && npm run build)
+```
+
+Each `mcp-servers/*` folder has its own lockfile; `yarn install && yarn build` works there too if you prefer Yarn.
+
+Use an **absolute path** in `args` to the compiled file above (the Next.js server runs on the same machine that must run `node`). Example for HRM after building:
+
+```json
+{
+  "mcpServers": {
+    "hrm-mcp": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-servers/hrm/dist/mcp/server.js"],
+      "env": { }
+    }
+  }
+}
+```
+
+Fill `env` per the connector README (API URLs, tokens, etc.). **HRM** and **vNOC** use `npm run mcp` for a local stdio run after build; **Redmine** uses `npm start` (or `node dist/server.js`).
 
 ## Project layout (high level)
 
@@ -93,7 +139,7 @@ This repository may include example or internal MCP server packages under `mcp-s
 ├── src/server/           # NIM proxy, MCP, SQLite
 ├── data/                 # Default SQLite directory (gitignored db files)
 ├── public/               # Static assets
-└── mcp-servers/          # Optional MCP server packages (if present)
+└── mcp-servers/          # hrm, vnoc, redmine — build separately (see above)
 ```
 
 ## API routes (overview)
@@ -107,8 +153,9 @@ This repository may include example or internal MCP server packages under `mcp-s
 
 ## Troubleshooting
 
-- **503 / “Set NIM_CHAT_URL and NIM_API_KEY”** — Add both variables and restart `yarn dev`.
+- **503 / “Set NIM_CHAT_URL and NIM_API_KEY”** — Add both variables and restart `npm run dev`.
 - **MCP tools not used** — Ensure saved JSON has `mcpServers`, at least one enabled server with a valid `command`, and that `MCP_TOOLS_ENABLED` is not `0`.
+- **MCP server fails to start** — Run `npm install` and `npm run build` in that connector’s folder (`mcp-servers/...`), use an **absolute** path to the built `dist/...js` file in `args`, and match the entry in the table under [Bundled MCP servers](#bundled-mcp-servers-mcp-servers).
 - **400 from NIM on thinking** — Set `NIM_THINKING_PARAMS=0`.
 - **SQLite** — Ensure the process can create/write `data/` (or set `SQLITE_PATH` to a writable file).
 
