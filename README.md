@@ -22,7 +22,7 @@ A ChatGPT-style web client for **[NVIDIA NIM](https://docs.nvidia.com/nim/)** (O
 ## Quick start
 
 ```bash
-cd MCP-Client
+cd MCP-Client-Web
 yarn install
 ```
 
